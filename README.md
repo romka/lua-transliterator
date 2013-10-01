@@ -11,6 +11,6 @@ Class depends on file bit.lua from LuaBit library (http://luaforge.net/projects/
 Usage
 =====
 
-t = Transliterator.new()
+t = Transliterator.new('data') -- 'data' is a path to directory with replacement tables
 
 print(t:transliteration_get('Тест стринг'))
