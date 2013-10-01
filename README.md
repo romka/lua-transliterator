@@ -12,4 +12,4 @@ Usage
 =====
 
 t = Transliterator.new()
-print(t:transliteration_get('Тест стринг'))
+print(t:transliteration_get('п╒п╣я│я┌ я│я┌я─п╦п╫пЁ'))
