@@ -137,17 +137,17 @@ function Transliterator:transliteration_process(str, unknown)
 
 			current = current + bytes_in_sequence
 		else
-		if byte1 < 0x80 then
-			-- ASCII byte.
-			result = result .. ch;
-		elseif byte1 < 0xc0 then
-			-- Illegal tail bytes.
-			result = result .. unknown;
-		else
-			-- Miscellaneous freaks.
-			result = result .. unknown;
-		end
-		current = current + 1
+			if byte1 < 0x80 then
+				-- ASCII byte.
+				result = result .. ch;
+			elseif byte1 < 0xc0 then
+				-- Illegal tail bytes.
+				result = result .. unknown;
+			else
+				-- Miscellaneous freaks.
+				result = result .. unknown;
+			end
+			current = current + 1
 		end
 	end
 
@@ -170,7 +170,7 @@ function Transliterator:transliteration_replace(ord, unknown, langcode)
 		
 			self.template[bank] = repl.replacements()
 			
-			--print('loaded bank', bank)
+			-- print('loaded bank', bank)
 		else
 			-- print('bank not found', bank)
 			return unknown
