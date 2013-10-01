@@ -7,7 +7,16 @@ Author - Roman Arkharov arkharov@gmail.com
 (C) 2013
 ]]
 
-Transliterator = Core.class()
+Transliterator = {}
+
+function Transliterator:new(path_to_data_dir, o)
+	o = o or {}
+	setmetatable(o, self)
+	self.__index = self
+	
+	self:init(path_to_data_dir)
+	return o
+end
 
 function Transliterator:init(path_to_data_dir)
 	if path_to_data_dir == nil then
@@ -47,6 +56,12 @@ function Transliterator:init(path_to_data_dir)
 end
 
 function Transliterator:transliteration_get(input, unknown)
+	local input = input or ''
+	
+	if input == '' then
+		return ''
+	end
+	
 	local unknown = unknown or '?'
 
 	return self:transliteration_process(input, unknown)
@@ -68,7 +83,7 @@ function Transliterator:transliteration_process(str, unknown)
 	local strlen = string.len(str)
 	local current = 1
 	
-	while current < strlen do
+	while current < strlen + 1 do
 		local ch = string.sub(str, current, current)
 		-- local real_ch = unknown
 		local transliterated_real_ch = unknown
@@ -76,51 +91,51 @@ function Transliterator:transliteration_process(str, unknown)
 		local byte1 = string.byte(ch)
 
 		if self.tail_bytes[ch] > 0 then
-		local sequence = {}
-		local bytes_in_sequence = 1
+			local sequence = {}
+			local bytes_in_sequence = 1
 
-		-- Values bellow were taken here: http://en.wikipedia.org/wiki/UTF-8#Description
-		if byte1 < 0x80 then
-			bytes_in_sequence = 1
-			-- real_ch = ch
-			result = result .. ch
-		elseif byte1 >= 0x80 and byte1 < 0x800 then
-			bytes_in_sequence = 2
-		elseif byte1 >= 0x800 and byte1 < 0x10000 then
-			bytes_in_sequence = 3
-		elseif byte1 >= 0x10000 and byte1 < 0x200000 then
-			bytes_in_sequence = 4
-		elseif byte1 >= 0x200000 and byte1 < 0x4000000 then
-			bytes_in_sequence = 5
-		elseif byte1 >= 0x4000000 and byte1 <= 0x7FFFFFFF then
-			bytes_in_sequence = 6
-		end
-
-		if bytes_in_sequence > 1 then
-			for i = current, current + bytes_in_sequence - 1, 1 do
-				table.insert(sequence, string.byte(string.sub(str, i, i)))
+			-- Values bellow were taken here: http://en.wikipedia.org/wiki/UTF-8#Description
+			if byte1 < 0x80 then
+				bytes_in_sequence = 1
+				-- real_ch = ch
+				result = result .. ch
+			elseif byte1 >= 0x80 and byte1 < 0x800 then
+				bytes_in_sequence = 2
+			elseif byte1 >= 0x800 and byte1 < 0x10000 then
+				bytes_in_sequence = 3
+			elseif byte1 >= 0x10000 and byte1 < 0x200000 then
+				bytes_in_sequence = 4
+			elseif byte1 >= 0x200000 and byte1 < 0x4000000 then
+				bytes_in_sequence = 5
+			elseif byte1 >= 0x4000000 and byte1 <= 0x7FFFFFFF then
+				bytes_in_sequence = 6
 			end
 
-			local ord = ''
-			if bytes_in_sequence == 2 then
-				ord = (byte1 - 192) * 64 + sequence[2] - 128
-			elseif bytes_in_sequence == 3 then
-				ord = (byte1 - 224) * 4096 + (sequence[2] - 128) * 64 + sequence[3] - 128
-			elseif bytes_in_sequence == 4 then
-				ord = (byte1 - 240) * 262144 + (sequence[2] - 128) * 4096 + (sequence[3] - 128) * 64 + sequence[4] - 128
-			elseif bytes_in_sequence == 5 then
-				ord = (byte1 - 248) * 16777216 + (sequence[2] - 128) * 262144 + (sequence[3] - 128) * 4096 + (sequence[4] - 128) * 64 + sequence[5] - 128
-			elseif bytes_in_sequence == 6 then
-				ord = (byte1 - 252) * 1073741824 + (sequence[2] - 128) * 16777216 + (sequence[3] - 128) * 262144 + (sequence[4] - 128) * 4096 + (sequence[5] - 128) * 64 + sequence[6] - 128
+			if bytes_in_sequence > 1 then
+				for i = current, current + bytes_in_sequence - 1, 1 do
+					table.insert(sequence, string.byte(string.sub(str, i, i)))
+				end
+
+				local ord = ''
+				if bytes_in_sequence == 2 then
+					ord = (byte1 - 192) * 64 + sequence[2] - 128
+				elseif bytes_in_sequence == 3 then
+					ord = (byte1 - 224) * 4096 + (sequence[2] - 128) * 64 + sequence[3] - 128
+				elseif bytes_in_sequence == 4 then
+					ord = (byte1 - 240) * 262144 + (sequence[2] - 128) * 4096 + (sequence[3] - 128) * 64 + sequence[4] - 128
+				elseif bytes_in_sequence == 5 then
+					ord = (byte1 - 248) * 16777216 + (sequence[2] - 128) * 262144 + (sequence[3] - 128) * 4096 + (sequence[4] - 128) * 64 + sequence[5] - 128
+				elseif bytes_in_sequence == 6 then
+					ord = (byte1 - 252) * 1073741824 + (sequence[2] - 128) * 16777216 + (sequence[3] - 128) * 262144 + (sequence[4] - 128) * 4096 + (sequence[5] - 128) * 64 + sequence[6] - 128
+				end
+
+				--real_ch = string.sub(str, current, current + bytes_in_sequence - 1)
+
+				transliterated_real_ch = self:transliteration_replace(ord, unknown)
+				result = result .. transliterated_real_ch
 			end
 
-			--real_ch = string.sub(str, current, current + bytes_in_sequence - 1)
-
-			transliterated_real_ch = self:transliteration_replace(ord, unknown)
-			result = result .. transliterated_real_ch
-		end
-
-		current = current + bytes_in_sequence
+			current = current + bytes_in_sequence
 		else
 		if byte1 < 0x80 then
 			-- ASCII byte.
