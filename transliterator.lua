@@ -9,7 +9,16 @@ Author - Roman Arkharov arkharov@gmail.com
 
 Transliterator = Core.class()
 
-function Transliterator:init()
+function Transliterator:init(path_to_data_dir)
+	if path_to_data_dir == nil then
+		error('Data directory wasn\'t set')
+	end
+	
+	self.path_to_data_dir = path_to_data_dir
+	
+	-- List of existing transliteration tables
+	self.replacement_files = {['ff'] = 1, ['01'] = 1, ['02'] = 1, ['03'] = 1, ['04'] = 1, ['05'] = 1, ['06'] = 1, ['07'] = 1, ['09'] = 1, ['0a'] = 1, ['0b'] = 1, ['0c'] = 1, ['0d'] = 1, ['0e'] = 1, ['0f'] = 1, ['10'] = 1, ['11'] = 1, ['12'] = 1, ['13'] = 1, ['14'] = 1, ['15'] = 1, ['16'] = 1, ['17'] = 1, ['18'] = 1, ['1e'] = 1, ['1f'] = 1, ['20'] = 1, ['21'] = 1, ['22'] = 1, ['23'] = 1, ['24'] = 1, ['25'] = 1, ['26'] = 1, ['27'] = 1, ['28'] = 1, ['2e'] = 1, ['2f'] = 1, ['30'] = 1, ['31'] = 1, ['32'] = 1, ['33'] = 1, ['4d'] = 1, ['4e'] = 1, ['4f'] = 1, ['50'] = 1, ['51'] = 1, ['52'] = 1, ['53'] = 1, ['54'] = 1, ['55'] = 1, ['56'] = 1, ['57'] = 1, ['58'] = 1, ['59'] = 1, ['5a'] = 1, ['5b'] = 1, ['5c'] = 1, ['5d'] = 1, ['5e'] = 1, ['5f'] = 1, ['60'] = 1, ['61'] = 1, ['62'] = 1, ['63'] = 1, ['64'] = 1, ['65'] = 1, ['66'] = 1, ['67'] = 1, ['68'] = 1, ['69'] = 1, ['6a'] = 1, ['6b'] = 1, ['6c'] = 1, ['6d'] = 1, ['6e'] = 1, ['6f'] = 1, ['70'] = 1, ['71'] = 1, ['72'] = 1, ['73'] = 1, ['74'] = 1, ['75'] = 1, ['76'] = 1, ['77'] = 1, ['78'] = 1, ['79'] = 1, ['7a'] = 1, ['7b'] = 1, ['7c'] = 1, ['7d'] = 1, ['7e'] = 1, ['7f'] = 1, ['80'] = 1, ['81'] = 1, ['82'] = 1, ['83'] = 1, ['84'] = 1, ['85'] = 1, ['86'] = 1, ['87'] = 1, ['88'] = 1, ['89'] = 1, ['8a'] = 1, ['8b'] = 1, ['8c'] = 1, ['8d'] = 1, ['8e'] = 1, ['8f'] = 1, ['90'] = 1, ['91'] = 1, ['92'] = 1, ['93'] = 1, ['94'] = 1, ['95'] = 1, ['96'] = 1, ['97'] = 1, ['98'] = 1, ['99'] = 1, ['9a'] = 1, ['9b'] = 1, ['9c'] = 1, ['9d'] = 1, ['9e'] = 1, ['9f'] = 1, ['a0'] = 1, ['a1'] = 1, ['a2'] = 1, ['a3'] = 1, ['a4'] = 1, ['ac'] = 1, ['ad'] = 1, ['ae'] = 1, ['af'] = 1, ['b0'] = 1, ['b1'] = 1, ['b2'] = 1, ['b3'] = 1, ['b4'] = 1, ['b5'] = 1, ['b6'] = 1, ['b7'] = 1, ['b8'] = 1, ['b9'] = 1, ['ba'] = 1, ['bb'] = 1, ['bc'] = 1, ['bd'] = 1, ['be'] = 1, ['bf'] = 1, ['c0'] = 1, ['c1'] = 1, ['c2'] = 1, ['c3'] = 1, ['c4'] = 1, ['c5'] = 1, ['c6'] = 1, ['c7'] = 1, ['c8'] = 1, ['c9'] = 1, ['ca'] = 1, ['cb'] = 1, ['cc'] = 1, ['cd'] = 1, ['ce'] = 1, ['cf'] = 1, ['d0'] = 1, ['d1'] = 1, ['d2'] = 1, ['d3'] = 1, ['d4'] = 1, ['d5'] = 1, ['d6'] = 1, ['d7'] = 1, ['f9'] = 1, ['fa'] = 1, ['fb'] = 1, ['fc'] = 1, ['fd'] = 1, ['fe'] = 1,}
+	
 	self.tail_bytes = {}
 	local remaining = ''
 
@@ -87,7 +96,6 @@ function Transliterator:transliteration_process(str, unknown)
 			bytes_in_sequence = 6
 		end
 
-
 		if bytes_in_sequence > 1 then
 			for i = current, current + bytes_in_sequence - 1, 1 do
 				table.insert(sequence, string.byte(string.sub(str, i, i)))
@@ -140,45 +148,50 @@ function Transliterator:transliteration_replace(ord, unknown, langcode)
 		bank = '0' .. bank
 	end
 	
-	local function_name = 'replacements_x' .. bank
-	
 	if self.template[bank] == nil then
-		if _G[function_name] ~= nil then
-		self.template[bank] = _G[function_name]()
+		if self.replacement_files[bank] ~= nil then
+			local file_name = self.path_to_data_dir .. '/x' .. bank
+			local repl = require(file_name)
+		
+			self.template[bank] = repl.replacements()
+			
+			--print('loaded bank', bank)
 		else
-		return unknown
+			-- print('bank not found', bank)
+			return unknown
 		end
 	end
 	
 	if self.map == nil or self.map[bank] == nil or self.map[bank][langcode] == nil then
 		if langcode ~= 'en' and self.template[bank][langcode] ~= nil then
-		-- Merge language specific mappings with the default transliteration table
-		if self.map[bank] == nil then
-			self.map[bank] = {}
-		end
+			-- Merge language specific mappings with the default transliteration table
+			if self.map[bank] == nil then
+				self.map[bank] = {}
+			end
 
-		if self.map[bank][langcode] == nil then
-			self.map[bank][langcode] = {}
-		end
+			if self.map[bank][langcode] == nil then
+				self.map[bank][langcode] = {}
+			end
 
-		self.map[bank][langcode] = self.template[bank][langcode]
-		for k, v in pairs(self.template[bank]['en']) do 
-			self.map[bank][langcode][k] = v 
-		end
+			self.map[bank][langcode] = self.template[bank][langcode]
+			for k, v in pairs(self.template[bank]['en']) do 
+				self.map[bank][langcode][k] = v 
+			end
 		else 
-		if self.map[bank] == nil then
-			self.map[bank] = {}
-		end
+			if self.map[bank] == nil then
+				self.map[bank] = {}
+			end
 
-		if self.map[bank][langcode] == nil then
-			self.map[bank][langcode] = {}
-		end
-		self.map[bank][langcode] = self.template[bank]['en']
+			if self.map[bank][langcode] == nil then
+				self.map[bank][langcode] = {}
+			end
+			
+			self.map[bank][langcode] = self.template[bank]['en']
 		end
 	end
 
 	ord = bit.band(ord, 255) + 1
-	
+
 	if self.map[bank][langcode][ord] ~= nil then
 		return self.map[bank][langcode][ord]
 	end
