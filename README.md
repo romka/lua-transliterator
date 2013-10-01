@@ -12,4 +12,5 @@ Usage
 =====
 
 t = Transliterator.new()
+
 print(t:transliteration_get('Тест стринг'))
